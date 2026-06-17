@@ -152,3 +152,83 @@ char	*get_next_line(int fd)
 	stash = clean_stash(stash);
 	return (line);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/////////\
+
+
+
+////////////
+#include "get_next_line.h"
+#include <stdlib.h>
+#include <unistd.h>
+
+char	*get_next_line(int fd)
+{
+	static char	buf[BUFFER_SIZE];
+	static int	pos;
+	static int	bytes;
+	char		*line;
+	int			len;
+	char		*tmp;
+
+	line = NULL;
+	len = 0;
+	while (1)
+	{
+		if (pos >= bytes)
+		{
+			bytes = read(fd, buf, BUFFER_SIZE);
+			pos = 0;
+			if (bytes <= 0)
+				break ;
+		}
+		tmp = malloc(len + 2);
+		if (!tmp)
+			return (free(line), NULL);
+		for (int i = 0; i < len; i++)
+			tmp[i] = line[i];
+		tmp[len] = buf[pos++];
+		tmp[len + 1] = '\0';
+		free(line);
+		line = tmp;
+		len++;
+		if (line[len - 1] == '\n')
+			return (line);
+	}
+	if (len > 0)
+		return (line);
+	free(line);
+	return (NULL);
+}
+int	main(void)
+{
+	int		fd;
+	char	*line;
+
+	fd = open("h.txt", O_RDONLY);
+	if (fd < 0)
+	{
+		perror("open");
+		return (1);
+	}
+	while ((line = get_next_line(fd)))
+	{
+		printf("%s", line);
+		free(line);
+	}
+	close(fd);
+	return (0);
+}
