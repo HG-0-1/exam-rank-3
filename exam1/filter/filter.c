@@ -1,92 +1,78 @@
-#define _GNU_SOURCE
+#define _GNU_SOURCE  
+#ifndef BUFFER_SIZE
+# define BUFFER_SIZE 42
+#endif
 
 #include <unistd.h>
-#include <string.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <string.h>
 
-static int	error(void)
+
+void ft_filter(char *buffer, const char *target)
 {
-	perror("Error");
-	return (1);
+    int i = 0;
+    int target_len = strlen(target);
+    int j, k;
+    while (buffer[i])
+    {
+        j = 0;
+        while (target[j] && (buffer[i + j] == target[j]))
+            j++;
+        
+        if (j == target_len) 
+        {
+            k = 0;
+            while (k < target_len)
+            {
+                write(1, "*", 1);
+                k++;
+            }
+            i += target_len; 
+        }
+        else
+        {
+            write(1, &buffer[i], 1);
+            i++;
+        }
+    }
 }
 
-static int	print_stars(size_t n)
+int main(int argc, char **argv)
 {
-	size_t	i;
+    if (argc != 2 || argv[1][0] == '\0')
+        return 1;
 
-	i = 0;
-	while (i < n)
-	{
-		if (write(1, "*", 1) < 0)
-			return (1);
-		i++;
-	}
-	return (0);
-}
+    char temp[BUFFER_SIZE];
+    char *result = NULL;
+    char *buffer;
+    int total_read = 0;
+    ssize_t bytes;
 
-int	main(int ac, char **av)
-{
-	char	buf[1024];
-	char	*keep;
-	char	*tmp;
-	char	*found;
-	ssize_t	r;
-	size_t	plen;
-	size_t	klen;
-	size_t	part;
-
-	if (ac != 2 || !av[1][0])
-		return (1);
-	plen = strlen(av[1]);
-	keep = calloc(1, 1);
-	if (!keep)
-		return (error());
-	klen = 0;
-	while ((r = read(0, buf, sizeof(buf))) > 0)
-	{
-		tmp = realloc(keep, klen + r + 1);
-		if (!tmp)
-		{
-			free(keep);
-			return (error());
-		}
-		keep = tmp;
-		memmove(keep + klen, buf, r);
-		klen += r;
-		keep[klen] = '\0';
-		part = 0;
-		while ((found = memmem(keep + part, klen - part, av[1], plen)))
-		{
-			write(1, keep + part, found - (keep + part));
-			if (print_stars(plen))
-			{
-				free(keep);
-				return (1);
-			}
-			part = (found - keep) + plen;
-		}
-		if (part)
-		{
-			memmove(keep, keep + part, klen - part);
-			klen -= part;
-			keep[klen] = '\0';
-		}
-		if (klen > plen)
-		{
-			write(1, keep, klen - plen + 1);
-			memmove(keep, keep + klen - plen + 1, plen - 1);
-			klen = plen - 1;
-			keep[klen] = '\0';
-		}
-	}
-	if (r < 0)
-	{
-		free(keep);
-		return (error());
-	}
-	if (klen)
-		write(1, keep, klen);
-	free(keep);
-	return (0);
+    while ((bytes = read(0, temp, BUFFER_SIZE)) > 0)
+    {
+        buffer = realloc(result, total_read + bytes + 1);
+        if (!buffer)
+        {
+            free(result);
+            perror("realloc");
+            return 1;
+        }
+        result = buffer;  
+        memmove(result + total_read, temp, bytes);
+        total_read += bytes;
+        result[total_read] = '\0'; 
+    }
+    if (bytes < 0)
+    {
+        perror("read");
+        free(result);
+        return 1;
+    }
+    if (!result)
+        return 0;
+    ft_filter(result, argv[1]);
+    free(result);
+    return 0;
 }
